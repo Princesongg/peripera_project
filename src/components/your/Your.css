@@ -1,0 +1,11 @@
+.your { margin-top: 0; background: #92bfea; color: #edf4fa; }
+.your .play__photo { left: 58.759%; top: 13.55%; box-shadow: 8px 9px 15px 3px #3a91e580; }
+.your .play__text { left: 2.70833%; top: 46.38889%; width: 48.4375%; }
+.your .play__text h2 { font-size: 14.0625cqw; line-height: .9; }
+.your .play__letter--cursor::after { border-color: #edf4fa; }
+@media (max-width: 700px) {
+    .your .play__photo { left: auto; top: auto; }
+    .your .play__text { left: auto; top: auto; width: 100%; }
+    .your .play__text h2 { font-size: 110px; }
+}
+@media (prefers-reduced-motion: reduce) { .your .play__photo { transform: rotate(8.33deg); } }

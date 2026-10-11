@@ -1,0 +1,21 @@
+.mood-marquee { position: relative; z-index: 5; overflow: hidden; padding: 8.9vw 0 3vw; background: #fff; font-family: 'Spicy Rice', serif; }
+.mood-transition { position: relative; z-index: 5; height: calc(max(67.15vw, 100svh) + 85svh); }
+.mood-transition > .mood-marquee { position: sticky; top: 0; min-height: 100svh; clip-path: inset(0 50%); }
+.mood-transition .mood-marquee__row { opacity: var(--mood-reveal, 0); }
+.mood-marquee__row { height: 11.05vw; position: relative; }
+.mood-marquee__track { display: flex; width: max-content; margin-left: var(--row-offset); animation: mood-marquee-flow 65s linear infinite; animation-direction: var(--row-direction); animation-play-state: paused; }
+.mood-marquee--playing .mood-marquee__track { animation-play-state: running; }
+.mood-marquee__group { display: flex; align-items: center; gap: var(--row-gap); padding-right: var(--row-gap); flex-shrink: 0; }
+.mood-marquee__item { display: flex; align-items: flex-start; gap: .52vw; white-space: nowrap; font-size: 9.375vw; line-height: 1.2; color: var(--word-color); transition: color 300ms ease-out; }
+.mood-marquee__number { display: inline-block; min-width: 3.38vw; padding-top: .25vw; font-size: 2.5vw; color: var(--number-color); transition: color 300ms ease-out; }
+.mood-marquee__item:hover, .mood-marquee__item:hover .mood-marquee__number { color: var(--hover-color); }
+@keyframes mood-marquee-flow { to { transform: translateX(-33.333333%); } }
+@media (max-width: 700px) {
+    .mood-transition { height: calc(max(525px, 100svh) + 85svh); }
+    .mood-marquee { padding: 60px 0 40px; }
+    .mood-marquee__row { height: 85px; }
+    .mood-marquee__item { font-size: 70px; gap: 5px; }
+    .mood-marquee__number { font-size: 18px; min-width: 24px; }
+    .mood-marquee__group { gap: 35px; padding-right: 35px; }
+}
+@media (prefers-reduced-motion: reduce) { .mood-marquee__track { animation: none; } }

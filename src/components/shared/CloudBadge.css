@@ -1,0 +1,6 @@
+.cloud-badge::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 25% 85%, #a9d8e8 0, transparent 35%), radial-gradient(ellipse at 80% 15%, #ffb2c7 0, transparent 42%), #ff789c; mask-image: var(--cursor-shape); mask-size: 100% 100%; mask-repeat: no-repeat; }
+.cloud-badge__eyes { position: absolute; top: 20%; left: 38%; width: 24%; height: 19%; transform: rotate(-7deg); }
+.cloud-badge__eyes::before, .cloud-badge__eyes::after { content: ''; position: absolute; top: 0; width: 44%; height: 100%; border-radius: 50%; background: radial-gradient(circle at 58% 42%, white 0 8%, transparent 10%), radial-gradient(ellipse at 52% 57%, #672e3b 0 27%, transparent 30%), white; box-shadow: 0 1px 1px #c7507130; }
+.cloud-badge__eyes::before { left: 0; }
+.cloud-badge__eyes::after { right: 0; }
+.cloud-badge__label { position: relative; margin-top: 8%; transform: rotate(-5deg); text-shadow: 0 1px 1px #c7507190; }
