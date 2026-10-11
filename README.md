@@ -27,6 +27,12 @@ npm.cmd run preview
 Vite는 빌드할 때 CSS의 이미지·폰트 URL에도 이 경로를 적용합니다.
 다른 경로에 배포할 경우 `vite.config.js`의 `base` 설정을 변경하세요.
 
+## Vercel 배포
+
+프로젝트 이름은 `peripera_project`이며 주소는 https://periperaproject.vercel.app/ 입니다.
+Vercel 빌드에서는 `VERCEL` 환경 변수를 확인해 기본 경로 `/`를 사용합니다.
+로그인 및 프로젝트 연결 후 `vercel deploy --prod`로 다시 배포할 수 있습니다.
+
 ## 주요 파일
 
 - `src/App.jsx`: 메인 페이지 구성
