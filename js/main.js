@@ -24,24 +24,31 @@
     ['model-second', true, '두 번째 모델 이미지 보기'], ['heart', true, '하트 이미지 보기'],
     ['heart-blue', true, '파란 하트 이미지 보기'], ['products', false, '제품 이미지 보기'],
   ];
+  const mobileHero = matchMedia('(max-width: 700px)');
+  const mobileReveals = [reveals[0], reveals[2], reveals[1], ...reveals.slice(3)];
+  const shown = new Set();
   let reveal = 0;
   const revealNext = () => {
     if (reveal >= reveals.length) return;
-    const [name, wrapped] = reveals[reveal++];
+    const sequence = mobileHero.matches ? mobileReveals : reveals;
+    const [name, wrapped] = sequence.find(([name]) => !shown.has(name));
+    shown.add(name);
+    reveal++;
     const img = document.createElement('img');
     img.src = `./images/hero-${name}.png`; img.alt = ''; img.draggable = false;
     const node = wrapped ? document.createElement('div') : img;
     node.className = `hero__${name}`;
     if (wrapped) node.append(img);
     art.append(node);
-    if (reveal === reveals.length) { tap.hidden = true; hero.classList.remove('hero--interactive'); }
-    else tap.setAttribute('aria-label', reveals[reveal][2]);
+    hero.dataset.reveal = String(reveal);
+    if (reveal === reveals.length) { tap.disabled = true; tap.setAttribute('aria-label', '콜라주 완성'); hero.classList.remove('hero--interactive'); }
+    else tap.setAttribute('aria-label', sequence.find(([name]) => !shown.has(name))[2]);
   };
   hero.addEventListener('click', event => { if (!event.target.closest('button, a, input, nav')) revealNext(); });
   tap.addEventListener('click', revealNext);
   const hideTap = () => tap.classList.remove('hero__tap--visible');
   hero.addEventListener('pointermove', event => {
-    if (event.pointerType !== 'mouse') return;
+    if (event.pointerType !== 'mouse' || mobileHero.matches || reveal >= reveals.length) return;
     const bounds = hero.getBoundingClientRect();
     tap.style.left = `${Math.max(0, Math.min(event.clientX - bounds.left + 16, hero.clientWidth - tap.offsetWidth))}px`;
     tap.style.top = `${Math.max(0, Math.min(event.clientY - bounds.top + 12, hero.clientHeight - tap.offsetHeight))}px`;
@@ -193,7 +200,9 @@
       const b = section.getBoundingClientRect(), next = section.nextElementSibling;
       section.style.setProperty('--play-pin-top', `${Math.min(0, innerHeight - section.offsetHeight)}px`);
       const covered = next?.classList.contains('play') && next.getBoundingClientRect().top <= innerHeight * .15;
-      const presenting = b.top <= innerHeight * .15 && b.bottom >= innerHeight * .85 && !covered;
+      const presenting = mobileHero.matches
+        ? b.top <= innerHeight * .75 && b.bottom > 0
+        : b.top <= innerHeight * .15 && b.bottom >= innerHeight * .85 && !covered;
       if (!presenting) start = null;
       else if (start === null) start = performance.now();
       const elapsed = start === null ? 0 : performance.now() - start;
@@ -213,7 +222,7 @@
   const mood = $('.mood-marquee'), transition = $('.mood-transition');
   new IntersectionObserver(([entry]) => mood.classList.toggle('mood-marquee--playing', entry.isIntersecting)).observe(mood);
   updates.push(() => {
-    const progress = reduced() ? 1 : clamp(-transition.getBoundingClientRect().top / (innerHeight * .75));
+    const progress = reduced() || mobileHero.matches ? 1 : clamp(-transition.getBoundingClientRect().top / (innerHeight * .75));
     const eased = progress * progress * (3 - 2 * progress);
     mood.style.clipPath = progress >= 1 ? 'none' : `inset(0 ${(1 - eased) * 50}%)`;
     mood.style.setProperty('--mood-reveal', clamp((progress - .2) / .65));
