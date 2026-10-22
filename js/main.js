@@ -15,19 +15,26 @@
   window.addEventListener('scroll', schedule, { passive: true });
   window.addEventListener('resize', schedule);
 
-  // 첫 화면: 클릭할 때마다 콜라주를 한 장씩 표시합니다.
+  // 첫 화면: 자동으로 콜라주를 완성하고 Tap Me로 다시 재생합니다.
   const hero = $('.hero');
   const tap = $('.hero__tap');
   const art = $('.hero__art');
   const reveals = [
-    ['lips', false, '입술 이미지 보기'], ['model', true, '모델 이미지 보기'],
-    ['model-second', true, '두 번째 모델 이미지 보기'], ['heart', true, '하트 이미지 보기'],
-    ['heart-blue', true, '파란 하트 이미지 보기'], ['products', false, '제품 이미지 보기'],
+    ['lips', false], ['model', true],
+    ['model-second', true], ['heart', true],
+    ['heart-blue', true], ['products', false],
   ];
   const mobileHero = matchMedia('(max-width: 700px)');
   const mobileReveals = [reveals[0], reveals[2], reveals[1], ...reveals.slice(3)];
   const shown = new Set();
   let reveal = 0;
+  let heroTimer;
+  let playback = 0;
+  const heroReady = Promise.all(reveals.map(([name]) => {
+    const img = new Image();
+    img.src = `./images/hero-${name}.png`;
+    return img.decode().catch(() => {});
+  }));
   const revealNext = () => {
     if (reveal >= reveals.length) return;
     const sequence = mobileHero.matches ? mobileReveals : reveals;
@@ -41,21 +48,40 @@
     if (wrapped) node.append(img);
     art.append(node);
     hero.dataset.reveal = String(reveal);
-    if (reveal === reveals.length) { tap.disabled = true; tap.setAttribute('aria-label', '콜라주 완성'); hero.classList.remove('hero--interactive'); }
-    else tap.setAttribute('aria-label', sequence.find(([name]) => !shown.has(name))[2]);
+    if (reveal < reveals.length) {
+      if (reduced()) revealNext();
+      else heroTimer = setTimeout(revealNext, 550);
+    }
   };
-  hero.addEventListener('click', event => { if (!event.target.closest('button, a, input, nav')) revealNext(); });
-  tap.addEventListener('click', revealNext);
-  const hideTap = () => tap.classList.remove('hero__tap--visible');
+  const playHero = async () => {
+    const currentPlayback = ++playback;
+    clearTimeout(heroTimer);
+    reveals.forEach(([name]) => $(`.hero__${name}`, art)?.remove());
+    shown.clear();
+    reveal = 0;
+    hero.dataset.reveal = '0';
+    await heroReady;
+    if (currentPlayback !== playback) return;
+    if (reduced()) revealNext();
+    else heroTimer = setTimeout(revealNext, 450);
+  };
+  hero.addEventListener('click', event => { if (!event.target.closest('button, a, input, nav')) playHero(); });
+  tap.addEventListener('click', playHero);
+  const hideTap = () => {
+    tap.style.removeProperty('left');
+    tap.style.removeProperty('top');
+  };
   hero.addEventListener('pointermove', event => {
-    if (event.pointerType !== 'mouse' || mobileHero.matches || reveal >= reveals.length) return;
+    if (event.pointerType !== 'mouse' || mobileHero.matches) return;
+    if (event.target.closest('header, nav')) { hideTap(); return; }
     const bounds = hero.getBoundingClientRect();
     tap.style.left = `${Math.max(0, Math.min(event.clientX - bounds.left + 16, hero.clientWidth - tap.offsetWidth))}px`;
     tap.style.top = `${Math.max(0, Math.min(event.clientY - bounds.top + 12, hero.clientHeight - tap.offsetHeight))}px`;
-    tap.classList.add('hero__tap--visible');
   });
   hero.addEventListener('pointerleave', hideTap);
   window.addEventListener('blur', hideTap);
+  window.addEventListener('resize', hideTap);
+  playHero();
   const menu = $('.hero__menu');
   const nav = document.createElement('nav');
   nav.id = 'hero-navigation'; nav.className = 'hero__navigation'; nav.hidden = true;
@@ -104,7 +130,7 @@
   }, { rootMargin: '0px 0px -35% 0px', threshold: .12 });
   brandObserver.observe(brand);
 
-  // 추천 카드의 회전 배치, 드래그, 방향키 이동.
+  // 추천 카드의 회전 배치, 휠, 드래그, 방향키 이동.
   const card = $('.card'), cardViewport = $('.card__viewport'), cursor = $('.card__cursor');
   const items = $$('.card__item');
   const slots = [[-31.571,487.1125],[439.392,267.409],[960.5,192],[1482.392,274.409],[1952.429,489.1125]];
@@ -129,6 +155,34 @@
     $('.card__sr-only').textContent = `${$('.card__photo img', items[wrap(current)]).alt}. ${wrap(current) + 1}번째 추천 제품, 총 ${items.length}개.`;
   };
   const step = amount => { current += amount; renderCards(); };
+  let wheelDistance = 0, lastWheelAt = 0, wheelLockedUntil = 0;
+  cardViewport.addEventListener('wheel', event => {
+    if (event.ctrlKey || cardPointer || !event.cancelable) return;
+    // 카드가 펼쳐진 뒤에만 휠을 받아 진입 스크롤을 방해하지 않습니다.
+    if (parseFloat(getComputedStyle(card).getPropertyValue('--card-reveal')) < .95) return;
+    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    if (!delta) return;
+    const now = performance.now();
+    if (now < wheelLockedUntil) {
+      event.preventDefault();
+      return;
+    }
+    const direction = Math.sign(delta), index = wrap(current);
+    // 양 끝에서는 페이지 스크롤로 이어집니다. NEXT / PREV는 계속 순환합니다.
+    if ((direction < 0 && index === 0) || (direction > 0 && index === items.length - 1)) {
+      wheelDistance = 0;
+      return;
+    }
+    event.preventDefault();
+    if (now - lastWheelAt > 180 || Math.sign(wheelDistance) !== direction) wheelDistance = 0;
+    lastWheelAt = now;
+    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
+    wheelDistance += delta * unit;
+    if (Math.abs(wheelDistance) < 35) return;
+    wheelDistance = 0;
+    wheelLockedUntil = now + (reduced() ? 250 : 650);
+    step(direction);
+  }, { passive: false });
   new ResizeObserver(() => requestAnimationFrame(() => { card.style.setProperty('--card-scale', Math.max(card.clientWidth / 1920, .55)); schedule(); })).observe(card);
   cardViewport.addEventListener('pointerdown', event => { if (event.button !== 0 || event.target.closest('.card__controls')) return; suppressCard = false; cardPointer = { x: event.clientX }; });
   cardViewport.addEventListener('pointermove', event => {
@@ -194,7 +248,6 @@
   }, { threshold: .35 }); textObserver.observe(text);
   $$('.play').forEach(section => {
     const angle = section.classList.contains('color') ? 1.37 : section.classList.contains('your') ? 8.33 : -3.98;
-    const letters = $$('.play__letter', section);
     let start = null;
     updates.push(() => {
       const b = section.getBoundingClientRect(), next = section.nextElementSibling;
@@ -210,9 +263,9 @@
       section.style.setProperty('--play-rise', `${reduced() ? 0 : (1 - eased) * 75}vh`);
       section.style.setProperty('--play-rotation', `${reduced() ? angle : 18 + eased * (angle - 18)}deg`);
       section.style.setProperty('--play-scale', reduced() ? 1 : .86 + eased * .14);
-      const count = !presenting ? 0 : reduced() ? letters.length : Math.min(letters.length, elapsed < 180 ? 0 : 1 + Math.floor((elapsed - 180) / 280));
-      typeLetters(letters, count, 'play', presenting);
-      if (presenting && (progress < 1 || count < letters.length)) schedule();
+      const titleProgress = reduced() ? 1 : clamp((elapsed - 180) / 1100);
+      section.style.setProperty('--play-title-opacity', 1 - Math.pow(1 - titleProgress, 2));
+      if (presenting && (progress < 1 || titleProgress < 1)) schedule();
     });
     const more = $('.play__more', section);
     const notice = document.createElement('small'); notice.className = 'play__notice'; notice.hidden = true; notice.setAttribute('role', 'status'); notice.textContent = '개인 포트폴리오용으로 제작된 페이지입니다.';
